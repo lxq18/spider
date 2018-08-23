@@ -7,38 +7,115 @@ import org.jsoup.select.Elements;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Spider {
+    /**
+     * 周排行
+     * @throws IOException
+     */
     @Test
-    public void test() throws IOException {
+    public void testWeekSaleSort() throws IOException {
         String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.170 Safari/537.36";
         //获取编辑推荐页
         //模拟火狐浏览器
-        Document document = Jsoup.connect("https://www.zhihu.com/explore/recommendations")
+        Document document = Jsoup.connect("https://list.tmall.com/search_product.htm?spm=a3204.7139825.1996500281.7.4OAMXu&s=0&user_id=1955345225&area_code=330100&cat=50514010&active=1&style=g&acm=lb-zebra-27092-331837.1003.4.467596&search_condition=1&sort=s&scm=1003.4.lb-zebra-27092-331837.OTHER_14440802694962_467596&n=40")
                 .userAgent(userAgent)
                 .get();
-        Element main = document.getElementById("zh-recommend-list-full");
-        Elements url = main.select("div").select("div:nth-child(2)")
-                .select("h2").select("a[class=question_link]");
-        for (Element question : url) {
-            //输出href后的值，即主页上每个关注问题的链接
-            String URL = question.attr("abs:href");
-            //下载问题链接指向的页面
-            Document document2 = Jsoup.connect(URL)
-                    .userAgent("Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)")
-                    .get();
-            //问题
-            Elements title = document2.select("#zh-question-title").select("h2").select("a");
-            //问题描述
-            Elements detail = document2.select("#zh-question-detail");
-            //回答
-            Elements answer = document2.select("#zh-question-answer-wrap")
-                    .select("div.zm-item-rich-text.expandable.js-collapse-body")
-                    .select("div.zm-editable-content.clearfix");
-            System.out.println("\n" + "链接：" + URL
-                    + "\n" + "标题：" + title.text()
-                    + "\n" + "问题描述：" + detail.text()
-                    + "\n" + "回答：" + answer.text());
+        Element weekSortElement = document.select("#filterForm")
+                .select("div")
+                .select("ul.filter-sort")
+                .select("li:nth-child(4)")
+                .select("a")
+                .first();
+        String weekUrl = weekSortElement.absUrl("href");
+
+        Document weekDocument = Jsoup.connect(weekUrl)
+                .userAgent(userAgent)
+                .get();
+        List<Product> productList = new ArrayList<>();
+        Elements productListElements = weekDocument.select("#J_ProductList").select("li.product");
+        for (Element e : productListElements) {
+            String id = e.attr("data-itemid");
+            Element productElement = e.select("div.productInfo").first();
+            Product product = new Product();
+            productList.add(product);
+
+            //#J_ProductList > li:nth-child(1) > div > h3 > a
+            //#J_ProductList > li:nth-child(1) > div > div.item-summary > div.item-sum > strong
+            //#J_ProductList > li:nth-child(1) > div > div.item-summary > div.item-price > span > strong
+            String img = productElement.select("div.product-img").select("a").select("img").attr("abs:src");
+            String title = productElement.select("h3").select("a").text();
+            String link = productElement.select("h3").select("a").attr("abs:href");
+            long weekSaleNum = Long.parseLong(
+                    (productElement.select("div.item-summary").select("div.item-sum").select("strong").text()));
+            double price = Double.parseDouble(
+                    (productElement.select("div.item-summary").select("div.item-price").select("span").select("strong").text()));
+
+            product.setId(id)
+                    .setTitle(title)
+                    .setLink(link)
+                    .setWeekSaleNum(weekSaleNum)
+                    .setPrice(price)
+                    .setHeadImg(img);
+
+            System.out.println(product);
         }
+
+    }
+
+    /**
+     * 总销量排行
+     * @throws IOException
+     */
+    @Test
+    public void testTotalSaleSort() throws IOException {
+        String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.170 Safari/537.36";
+        //获取编辑推荐页
+        //模拟火狐浏览器
+        Document document = Jsoup.connect("https://list.tmall.com/search_product.htm?spm=a3204.7139825.1996500281.7.4OAMXu&s=0&user_id=1955345225&area_code=330100&cat=50514010&active=1&style=g&acm=lb-zebra-27092-331837.1003.4.467596&search_condition=1&sort=s&scm=1003.4.lb-zebra-27092-331837.OTHER_14440802694962_467596&n=40")
+                .userAgent(userAgent)
+                .get();
+        Element weekSortElement = document.select("#filterForm")
+                .select("div")
+                .select("ul.filter-sort")
+                .select("li.now")
+                .select("a")
+                .first();
+        String weekUrl = weekSortElement.absUrl("href");
+
+        Document weekDocument = Jsoup.connect(weekUrl)
+                .userAgent(userAgent)
+                .get();
+        List<Product> productList = new ArrayList<>();
+        Elements productListElements = weekDocument.select("#J_ProductList").select("li.product");
+        for (Element e : productListElements) {
+            String id = e.attr("data-itemid");
+            Element productElement = e.select("div.productInfo").first();
+            Product product = new Product();
+            productList.add(product);
+
+            //#J_ProductList > li:nth-child(1) > div > h3 > a
+            //#J_ProductList > li:nth-child(1) > div > div.item-summary > div.item-sum > strong
+            //#J_ProductList > li:nth-child(1) > div > div.item-summary > div.item-price > span > strong
+            String img = productElement.select("div.product-img").select("a").select("img").attr("abs:src");
+            String title = productElement.select("h3").select("a").text();
+            String link = productElement.select("h3").select("a").attr("abs:href");
+            long weekSaleNum = Long.parseLong(
+                    (productElement.select("div.item-summary").select("div.item-sum").select("strong").text()));
+            double price = Double.parseDouble(
+                    (productElement.select("div.item-summary").select("div.item-price").select("span").select("strong").text()));
+
+            product.setId(id)
+                    .setTitle(title)
+                    .setLink(link)
+                    .setWeekSaleNum(weekSaleNum)
+                    .setPrice(price)
+                    .setHeadImg(img);
+
+            System.out.println(product);
+        }
+
     }
 }
